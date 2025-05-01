@@ -11,6 +11,7 @@ use std::pin::Pin;
 use std::task::{Context as stdContext, Poll};
 use tokio::io::{self, AsyncRead, ReadBuf};
 use tokio_util::io::ReaderStream;
+use tracing::{error, info, instrument};
 
 #[derive(Deserialize)]
 pub struct GetRequest {
@@ -35,7 +36,9 @@ impl AsyncRead for MyBytesMut {
     }
 }
 
+#[instrument(skip(req))]
 pub async fn get_object(Json(req): Json<GetRequest>) -> impl IntoResponse {
+    info!("Handling GET request for object.");
     let object_id = &req.object_id;
     let file_name = &req.file_name;
     let file_path = std::path::PathBuf::from(&file_name);
@@ -53,10 +56,17 @@ pub async fn get_object(Json(req): Json<GetRequest>) -> impl IntoResponse {
                     ),
                 ];
 
+                info!("Load and decode success!");
                 (StatusCode::OK, headers, body).into_response()
-            },
-            Err(e) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            }
+            Err(e) => {
+                error!("GET request failed: decode error: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
         },
-        Err(e) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        Err(e) => {
+            info!("GET request failed: load error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
     }
 }

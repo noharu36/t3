@@ -7,8 +7,11 @@ use axum::{
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::limit::RequestBodyLimitLayer;
+use tracing::{info, instrument};
 
+#[instrument]
 pub async fn run_server() -> Result<(), std::io::Error> {
+    info!("Starting the object storage server.");
     let app = Router::new()
         .route("/object", post(post_object))
         .layer(DefaultBodyLimit::disable())
@@ -17,8 +20,8 @@ pub async fn run_server() -> Result<(), std::io::Error> {
         .route("/object", delete(delete_object));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
-    println!("listening on {}", addr);
-    axum::serve(TcpListener::bind("127.0.0.1:8080").await.unwrap(), app).await?;
+    axum::serve(TcpListener::bind(addr).await.unwrap(), app).await?;
+    info!("listening on {}", addr);
 
     Ok(())
 }

@@ -1,18 +1,22 @@
 use crate::env::{DATA_SHARDS, NUM_OUTPUT_DIRS, OUTPUT_DIR_PREFIX, PARITY_SHARDS};
 use anyhow::Result;
 use bytes::{BufMut, BytesMut};
+use rayon::prelude::*;
 use reed_solomon_erasure::galois_8::ReedSolomon;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::path::Path;
 use tokio::fs;
-use rayon::prelude::*;
+use tracing::{info, instrument};
 
+#[instrument(skip(content))]
 pub async fn encode_file(content: BytesMut) -> Result<Vec<BytesMut>> {
+    info!("encoding...");
     let content_size = content.len();
     let r = ReedSolomon::new(DATA_SHARDS, PARITY_SHARDS)?;
     let shard_len = (content_size + DATA_SHARDS - 1) / DATA_SHARDS;
-    let mut shards: Vec<BytesMut> = (0..DATA_SHARDS).into_par_iter()
+    let mut shards: Vec<BytesMut> = (0..DATA_SHARDS)
+        .into_par_iter()
         .map(|i| {
             let start = i * shard_len;
             let end = std::cmp::min((i + 1) * shard_len, content_size);
@@ -30,11 +34,14 @@ pub async fn encode_file(content: BytesMut) -> Result<Vec<BytesMut>> {
     }
 
     r.encode(&mut shards)?;
+    info!("encoded!");
 
     Ok(shards)
 }
 
+#[instrument(skip(shards))]
 pub async fn save_shards(shards: &Vec<BytesMut>, object_id: &str) -> Result<()> {
+    info!("Starting save data...");
     for i in 0..shards.len() {
         let mut hasher = DefaultHasher::new();
         // object_idとシャードインデックスを組み合わせてハッシュ化
@@ -49,7 +56,7 @@ pub async fn save_shards(shards: &Vec<BytesMut>, object_id: &str) -> Result<()> 
         let filename = format!("{}_{:02}.bin", object_id, i);
         let filepath = output_path.join(filename);
         fs::write(&filepath, &shards[i]).await?;
-        println!("Saved shard {} to {:?}", i, filepath);
+        info!("Saved shard {} to {:?}", i, filepath);
     }
     Ok(())
 }

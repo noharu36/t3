@@ -6,8 +6,11 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::path::Path;
 use tokio::fs;
+use tracing::{error, info, instrument};
 
+#[instrument]
 pub async fn load_shards(object_id: &str) -> Result<Vec<Option<BytesMut>>> {
+    info!("Data loading...");
     let mut shards = vec![None; DATA_SHARDS + PARITY_SHARDS];
 
     for i in 0..(DATA_SHARDS + PARITY_SHARDS) {
@@ -25,7 +28,7 @@ pub async fn load_shards(object_id: &str) -> Result<Vec<Option<BytesMut>>> {
                 shards[i] = Some(BytesMut::from(&content[..]));
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                println!("Shard {} not found in {:?}.", i, filepath);
+                error!("Shard {} not found in {:?}.", i, filepath);
             }
             Err(e) => return Err(e.into()),
         }
@@ -33,7 +36,9 @@ pub async fn load_shards(object_id: &str) -> Result<Vec<Option<BytesMut>>> {
     Ok(shards)
 }
 
+#[instrument(skip(shards))]
 pub async fn decode_shards(shards: &mut Vec<Option<BytesMut>>) -> Result<BytesMut> {
+    info!("decoding...");
     let r = ReedSolomon::new(DATA_SHARDS, PARITY_SHARDS)?;
     r.reconstruct(shards)?;
 
