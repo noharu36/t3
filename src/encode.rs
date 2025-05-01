@@ -6,24 +6,24 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::path::Path;
 use tokio::fs;
+use rayon::prelude::*;
 
 pub async fn encode_file(content: BytesMut) -> Result<Vec<BytesMut>> {
+    let content_size = content.len();
     let r = ReedSolomon::new(DATA_SHARDS, PARITY_SHARDS)?;
-    let shard_len = (content.len() + DATA_SHARDS - 1) / DATA_SHARDS;
-    let mut shards = Vec::with_capacity(DATA_SHARDS + PARITY_SHARDS);
-
-    // ファイルをDATA_SHARDSの数に分割している
-    for i in 0..DATA_SHARDS {
-        let start = i * shard_len;
-        let end = std::cmp::min((i + 1) * shard_len, content.len());
-        let mut shard = BytesMut::new();
-        shard.extend_from_slice(&content[start..end]);
-        while shard.len() < shard_len {
-            // ライブラリの仕様上、shardの長さは全て等しくなければいけないのでゼロでパディングしている
-            shard.put_u8(0);
-        }
-        shards.push(shard);
-    }
+    let shard_len = (content_size + DATA_SHARDS - 1) / DATA_SHARDS;
+    let mut shards: Vec<BytesMut> = (0..DATA_SHARDS).into_par_iter()
+        .map(|i| {
+            let start = i * shard_len;
+            let end = std::cmp::min((i + 1) * shard_len, content_size);
+            let mut shard = BytesMut::from(&content[start..end]);
+            while shard.len() < shard_len {
+                // ライブラリの仕様上、shardの長さは全て等しくなければいけないのでゼロでパディングしている
+                shard.put_u8(0);
+            }
+            shard
+        })
+        .collect();
 
     for _ in 0..PARITY_SHARDS {
         shards.push(BytesMut::zeroed(shard_len));

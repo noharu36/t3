@@ -35,30 +35,28 @@ impl AsyncRead for MyBytesMut {
     }
 }
 
-pub async fn get_object(Json(req): Json<GetRequest>) -> Result<impl IntoResponse, StatusCode> {
+pub async fn get_object(Json(req): Json<GetRequest>) -> impl IntoResponse {
     let object_id = &req.object_id;
     let file_name = &req.file_name;
     let file_path = std::path::PathBuf::from(&file_name);
     let content_type = mime_guess::from_path(&file_path).first_or_octet_stream();
-    let mut loaded_shards = match decode::load_shards(object_id).await {
-        Ok(shards) => shards,
-        Err(e) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
-    };
-    let shards = match decode::decode_shards(&mut loaded_shards).await {
-        Ok(data) => data,
-        Err(e) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
-    };
+    match decode::load_shards(object_id).await {
+        Ok(mut shards) => match decode::decode_shards(&mut shards).await {
+            Ok(data) => {
+                let reader = ReaderStream::new(MyBytesMut(data));
+                let body = Body::from_stream(reader);
+                let headers = [
+                    (header::CONTENT_TYPE, content_type.to_string()),
+                    (
+                        header::CONTENT_DISPOSITION,
+                        format!("attachment; filename=\"{}\"", file_name),
+                    ),
+                ];
 
-    let reader = ReaderStream::new(MyBytesMut(shards));
-    let body = Body::from_stream(reader);
-
-    let headers = [
-        (header::CONTENT_TYPE, content_type.to_string()),
-        (
-            header::CONTENT_DISPOSITION,
-            format!("attachment; filename=\"{}\"", file_name),
-        ),
-    ];
-
-    Ok((headers, body))
+                (StatusCode::OK, headers, body).into_response()
+            },
+            Err(e) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        Err(e) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
 }

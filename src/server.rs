@@ -12,7 +12,7 @@ pub async fn run_server() -> Result<(), std::io::Error> {
     let app = Router::new()
         .route("/object", post(post_object))
         .layer(DefaultBodyLimit::disable())
-        .layer(RequestBodyLimitLayer::new(1024 * 1024 * 1024 * 1024))
+        .layer(RequestBodyLimitLayer::new(3 * 1024 * 1024 * 1024))
         .route("/object", get(get_object))
         .route("/object", delete(delete_object));
 
