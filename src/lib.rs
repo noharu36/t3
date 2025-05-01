@@ -5,8 +5,8 @@ pub mod server;
 
 // データシャード数とパリティシャード数
 pub mod env {
-    pub const DATA_SHARDS: usize = 4;
-    pub const PARITY_SHARDS: usize = 2;
-    pub const NUM_OUTPUT_DIRS: usize = 6;
+    pub const DATA_SHARDS: usize = 6;
+    pub const PARITY_SHARDS: usize = 3;
+    pub const NUM_OUTPUT_DIRS: usize = 9;
     pub const OUTPUT_DIR_PREFIX: &str = "outputs/output";
 }
