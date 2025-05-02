@@ -20,8 +20,8 @@ pub async fn run_server() -> Result<(), std::io::Error> {
         .route("/object", delete(delete_object));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
-    axum::serve(TcpListener::bind(addr).await.unwrap(), app).await?;
     info!("listening on {}", addr);
+    axum::serve(TcpListener::bind(addr).await.unwrap(), app).await?;
 
     Ok(())
 }
