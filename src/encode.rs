@@ -1,11 +1,9 @@
-use crate::env::{DATA_SHARDS, NUM_OUTPUT_DIRS, OUTPUT_DIR_PREFIX, PARITY_SHARDS};
+use crate::env::{DATA_SHARDS, PARITY_SHARDS};
+use crate::get_filepath;
 use anyhow::Result;
 use bytes::{BufMut, BytesMut};
 use rayon::prelude::*;
 use reed_solomon_erasure::galois_8::ReedSolomon;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
-use std::path::Path;
 use tokio::fs;
 use tracing::{info, instrument};
 
@@ -43,18 +41,7 @@ pub async fn encode_file(content: BytesMut) -> Result<Vec<BytesMut>> {
 pub async fn save_shards(shards: &Vec<BytesMut>, object_id: &str) -> Result<()> {
     info!("Starting save data...");
     for i in 0..shards.len() {
-        let mut hasher = DefaultHasher::new();
-        // object_idとシャードインデックスを組み合わせてハッシュ化
-        format!("{}{}", object_id, i).hash(&mut hasher);
-        let hash = hasher.finish();
-        // どのストレージに格納するかをハッシュ値を使って決めている
-        let dir_index = (hash % NUM_OUTPUT_DIRS as u64) as usize;
-        let output_dir_name = format!("{}{}", OUTPUT_DIR_PREFIX, dir_index + 1);
-        let output_path = Path::new(&output_dir_name);
-        fs::create_dir_all(output_path).await?;
-
-        let filename = format!("{}_{:02}.bin", object_id, i);
-        let filepath = output_path.join(filename);
+        let filepath = get_filepath(object_id, i).await;
         fs::write(&filepath, &shards[i]).await?;
         info!("Saved shard {} to {:?}", i, filepath);
     }
