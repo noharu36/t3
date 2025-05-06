@@ -1,23 +1,16 @@
-use crate::decode;
+use crate::{decode, db::MetadataStore};
 use axum::{
-    Json,
+    extract::{Path, State},
     body::Body,
     http::{StatusCode, header},
     response::IntoResponse,
 };
 use bytes::BytesMut;
-use serde::Deserialize;
 use std::pin::Pin;
 use std::task::{Context as stdContext, Poll};
 use tokio::io::{self, AsyncRead, ReadBuf};
 use tokio_util::io::ReaderStream;
 use tracing::{error, info, instrument};
-
-#[derive(Deserialize)]
-pub struct GetRequest {
-    object_id: String,
-    file_name: String,
-}
 
 struct MyBytesMut(pub BytesMut);
 
@@ -36,14 +29,24 @@ impl AsyncRead for MyBytesMut {
     }
 }
 
-#[instrument(skip(req))]
-pub async fn get_object(Json(req): Json<GetRequest>) -> impl IntoResponse {
+#[instrument(skip(store))]
+pub async fn get_object(Path((bucket_name, object_key)): Path<(String, String)>, State(store): State<MetadataStore>) -> impl IntoResponse {
     info!("Handling GET request for object.");
-    let object_id = &req.object_id;
-    let file_name = &req.file_name;
+    let metadata = match store.get_metadata(&bucket_name, &object_key).await {
+        Ok(Some(data)) => data,
+        Ok(None) => {
+            error!("data not found.");
+            return StatusCode::NOT_FOUND.into_response()
+        },
+        Err(e) => {
+            error!("database error: {}", e);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    };
+    let file_name = metadata.file_name.unwrap();
     let file_path = std::path::PathBuf::from(&file_name);
     let content_type = mime_guess::from_path(&file_path).first_or_octet_stream();
-    match decode::load_shards(object_id).await {
+    match decode::load_shards(&metadata.object_key).await {
         Ok(mut shards) => match decode::decode_shards(&mut shards).await {
             Ok(data) => {
                 let reader = ReaderStream::new(MyBytesMut(data));
@@ -66,7 +69,7 @@ pub async fn get_object(Json(req): Json<GetRequest>) -> impl IntoResponse {
         },
         Err(e) => {
             info!("GET request failed: load error: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            StatusCode::NOT_FOUND.into_response()
         }
     }
 }

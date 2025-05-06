@@ -8,6 +8,7 @@ pub mod decode;
 pub mod encode;
 pub mod handler;
 pub mod server;
+pub mod db;
 
 // データシャード数とパリティシャード数
 pub mod env {

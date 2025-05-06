@@ -1,4 +1,8 @@
-/target
-/outputs
+/target/
+outputs/
 /t3_server_request/
 .DS_Store
+.env
+/.sqlx/
+database.*
+
