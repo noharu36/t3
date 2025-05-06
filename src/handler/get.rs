@@ -1,7 +1,7 @@
-use crate::{decode, db::MetadataStore};
+use crate::{db::MetadataStore, decode};
 use axum::{
-    extract::{Path, State},
     body::Body,
+    extract::{Path, State},
     http::{StatusCode, header},
     response::IntoResponse,
 };
@@ -30,17 +30,20 @@ impl AsyncRead for MyBytesMut {
 }
 
 #[instrument(skip(store))]
-pub async fn get_object(Path((bucket_name, object_key)): Path<(String, String)>, State(store): State<MetadataStore>) -> impl IntoResponse {
+pub async fn get_object(
+    Path((bucket_name, object_key)): Path<(String, String)>,
+    State(store): State<MetadataStore>,
+) -> impl IntoResponse {
     info!("Handling GET request for object.");
     let metadata = match store.get_metadata(&bucket_name, &object_key).await {
         Ok(Some(data)) => data,
         Ok(None) => {
             error!("data not found.");
-            return StatusCode::NOT_FOUND.into_response()
-        },
+            return StatusCode::NOT_FOUND.into_response();
+        }
         Err(e) => {
             error!("database error: {}", e);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
     let file_name = metadata.file_name.unwrap();

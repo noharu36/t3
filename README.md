@@ -5,10 +5,12 @@
 
 ## 機能
 
-* **POST:** multipart形式でファイルをアップロードし、一意のオブジェクトIDを返します。データはReed-Solomon符号を用いて分割・エンコードされ、複数のストレージに分散して保存されます。
+* **PUT:** multipart形式でファイルをアップロードし、一意のオブジェクトIDを返します。データはReed-Solomon符号を用いて分割・エンコードされ、複数のストレージに分散して保存されます。
 * **GET:** オブジェクトIDと元のファイル名を指定することで、保存されたファイルを復元し、ダウンロードできます。元のファイル名からMIMEタイプを予測してレスポンスヘッダーに含めます。
 * **DELETE:** オブジェクトIDを指定することで、関連するデータをストレージから削除します。削除の成否がレスポンスとして返されます。
 * **ログトレース:** `tracing` クレートによるログ出力で、サーバーの動作を追跡できます。
+* **バケット:** オブジェクトを論理的にグループ化するためのバケット機能を提供します。
+* **オブジェクトメタデータ:** オブジェクトの Content-Type やサイズなどの基本的なメタデータを管理します。
 
 
 ## 使い方 (開発環境)
@@ -19,40 +21,19 @@
 
 ## API
 
-* **POST**: ファイルのアップロード (multipart/form-data)
-```
-curlでの例
-curl -v -X POST http://127.0.0.1:8080/object -F "file=@filepath"
-```
-* **GET**: ファイルのダウンロード
-```
-curlでの例
-curl -v -X GET \
-  http://127.0.0.1:8080/object \
-  -H "content-type: application/json" \
-  --data '{
-  "object_id": "POSTのレスポンスに含まれるobject_id",
-  "file_name": "元ファイル名"
-  }' \
---output "保存する時のファイル名"
-```
-* **DELETE**: ファイルの削除
-```
-curlでの例
-curl -v -X DELETE \
-  http://127.0.0.1:8080/object \
-  -H "content-type: application/json" \
-  --data '{
-  "object_id": "POSTのレスポンスに含まれるobject_id"
-}'
-```
+* `PUT /bucket/{bucket_name}/{object_key}`: ファイルのアップロード (multipart/form-data)
+* `GET /bucket/{bucket_name}/{object_key}`: ファイルのダウンロード
+* `DELETE /bucket/{bucket_name}/{object_key}`: ファイルの削除
+* `PUT /bucket/{bucket_name}`: バケットの作成
+* `GET /bucket`: バケットの一覧表示
+* `DELETE /bucket/{bucket_name}`: バケットの削除
 
-**※cURLでPOSTリクエストを送信した時、拡張子からContent-Typeを判断できない場合にエラーが出る可能性があります。PostmanやBrunoなどのAPIクライアントを使うとエラーを解消できる場合があります。**
+**※cURLでPOSTリクエストを送信した時、拡張子からContent-Typeを判断できない場合にエラーが出る可能性があります。PostmanやBrunoなどのAPIクライアントを使うとエラーを解消できるかもしれません...**
 
 ## 今後の開発予定
 
-- [ ] メタデータの導入
-- [ ] バケットの概念の導入
+- [x] メタデータの導入
+- [x] バケットの概念の導入
 - [ ] より高度なスケーラビリティと可用性の実現
 - [ ] 認証・認可機能の追加
 - [ ] オブジェクトライフサイクル管理

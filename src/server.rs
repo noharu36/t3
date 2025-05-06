@@ -1,16 +1,16 @@
-use super::handler::{delete::delete_object, get::get_object, post::post_object, bucket};
+use super::handler::{bucket, delete::delete_object, get::get_object, post::post_object};
+use crate::db::MetadataStore;
+use anyhow::Result;
 use axum::{
     Router,
     extract::DefaultBodyLimit,
     routing::{get, put},
 };
+use std::env;
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 use tower_http::limit::RequestBodyLimitLayer;
 use tracing::{info, instrument};
-use std::env;
-use crate::db::MetadataStore;
-use anyhow::Result;
 
 #[instrument]
 pub async fn run_server() -> Result<()> {
@@ -40,7 +40,10 @@ pub fn app(state: MetadataStore) -> Router {
 #[instrument]
 fn object_routes() -> Router<MetadataStore> {
     Router::new()
-        .route("/bucket/{:bucket_name}/{:object_key}", put(post_object).get(get_object).delete(delete_object))
+        .route(
+            "/bucket/{:bucket_name}/{:object_key}",
+            put(post_object).get(get_object).delete(delete_object),
+        )
         .layer(DefaultBodyLimit::disable())
         .layer(RequestBodyLimitLayer::new(3 * 1024 * 1024 * 1024))
 }
@@ -48,6 +51,9 @@ fn object_routes() -> Router<MetadataStore> {
 #[instrument]
 fn bucket_routes() -> Router<MetadataStore> {
     Router::new()
-        .route("/bucket/{:bucket_name}", put(bucket::create_bucket).delete(bucket::delete_bucket))
+        .route(
+            "/bucket/{:bucket_name}",
+            put(bucket::create_bucket).delete(bucket::delete_bucket),
+        )
         .route("/bucket", get(bucket::list_buckets))
 }

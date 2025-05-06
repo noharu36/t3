@@ -1,6 +1,6 @@
-use serde::{Serialize, Deserialize};
-use chrono::Utc;
 use anyhow::Result;
+use chrono::Utc;
+use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteQueryResult;
 
 #[derive(Deserialize, Serialize, Debug, sqlx::FromRow)]
@@ -32,7 +32,14 @@ impl MetadataStore {
         Ok(Self { pool })
     }
 
-    pub async fn insert_metadata(&self, bucket_name: &str, object_key: &str, file_name: Option<&str>, content_type: Option<&str>, content_length: i32) -> Result<i64> {
+    pub async fn insert_metadata(
+        &self,
+        bucket_name: &str,
+        object_key: &str,
+        file_name: Option<&str>,
+        content_type: Option<&str>,
+        content_length: i32,
+    ) -> Result<i64> {
         let now = Utc::now().to_rfc3339();
         let result = sqlx::query!(
             "
@@ -51,7 +58,11 @@ impl MetadataStore {
         Ok(result.last_insert_rowid())
     }
 
-    pub async fn get_metadata(&self, bucket_name: &str, object_key: &str) -> Result<Option<ObjectMetadata>> {
+    pub async fn get_metadata(
+        &self,
+        bucket_name: &str,
+        object_key: &str,
+    ) -> Result<Option<ObjectMetadata>> {
         let row = sqlx::query_as!(
             ObjectMetadata,
             "
@@ -66,7 +77,11 @@ impl MetadataStore {
         Ok(row)
     }
 
-    pub async fn delete_metadata(&self, bucket_name: &str, object_key: &str) -> Result<SqliteQueryResult> {
+    pub async fn delete_metadata(
+        &self,
+        bucket_name: &str,
+        object_key: &str,
+    ) -> Result<SqliteQueryResult> {
         let result = sqlx::query!(
             "
             DELETE FROM object_metadata WHERE bucket_name = ? AND object_key = ?

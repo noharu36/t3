@@ -1,6 +1,10 @@
 use super::api::ApiResult;
 use crate::{db::MetadataStore, encode, handler::bucket::exist_buckets};
-use axum::{extract::{Path, State, Multipart}, http::StatusCode, response::IntoResponse};
+use axum::{
+    extract::{Multipart, Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+};
 use bytes::Bytes;
 use serde::Serialize;
 use tracing::{error, info, instrument};
@@ -11,16 +15,23 @@ struct PostResponse {
 }
 
 #[instrument(skip(store, multipart))]
-pub async fn post_object(Path((bucket_name, object_key)): Path<(String, String)>, State(store): State<MetadataStore>, mut multipart: Multipart) -> impl IntoResponse {
+pub async fn post_object(
+    Path((bucket_name, object_key)): Path<(String, String)>,
+    State(store): State<MetadataStore>,
+    mut multipart: Multipart,
+) -> impl IntoResponse {
     info!("Handling POST request for object.");
 
     // bucketが存在していない場合はエラー
     match exist_buckets(&bucket_name, &store).await {
         Ok(exists) => {
             if !exists {
-                return ApiResult::Error(StatusCode::NOT_FOUND, "bucket not found. Please create the bucket first.".to_string())
+                return ApiResult::Error(
+                    StatusCode::NOT_FOUND,
+                    "bucket not found. Please create the bucket first.".to_string(),
+                );
             }
-        },
+        }
         Err(e) => return ApiResult::Error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
     };
     while let Ok(Some(field)) = multipart.next_field().await {
@@ -32,10 +43,22 @@ pub async fn post_object(Path((bucket_name, object_key)): Path<(String, String)>
             match field.bytes().await {
                 Ok(bytes) => {
                     let content_length = bytes.len() as i32;
-                    info!("bucket_name: {}, object_key: {}, file_name: {:?}, content_type: {:?}, content_length: {}", bucket_name, object_key, file_name, content_type, content_length);
-                    let _ = store.insert_metadata(&bucket_name, &object_key, file_name.as_deref(), content_type.as_deref(), content_length).await.unwrap();
+                    info!(
+                        "bucket_name: {}, object_key: {}, file_name: {:?}, content_type: {:?}, content_length: {}",
+                        bucket_name, object_key, file_name, content_type, content_length
+                    );
+                    let _ = store
+                        .insert_metadata(
+                            &bucket_name,
+                            &object_key,
+                            file_name.as_deref(),
+                            content_type.as_deref(),
+                            content_length,
+                        )
+                        .await
+                        .unwrap();
                     return store_data(bytes, object_key).await;
-                },
+                }
                 Err(e) => {
                     error!("POST request failed: {}: {}", e.status(), e.body_text());
                     return ApiResult::Error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string());
