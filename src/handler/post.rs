@@ -16,7 +16,7 @@ struct PostResponse {
 
 #[instrument(skip(store, multipart))]
 pub async fn post_object(
-    Path((bucket_name, object_key)): Path<(String, String)>,
+    Path((bucket_name, object_id)): Path<(String, String)>,
     State(store): State<MetadataStore>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
@@ -44,20 +44,20 @@ pub async fn post_object(
                 Ok(bytes) => {
                     let content_length = bytes.len() as i32;
                     info!(
-                        "bucket_name: {}, object_key: {}, file_name: {:?}, content_type: {:?}, content_length: {}",
-                        bucket_name, object_key, file_name, content_type, content_length
+                        "bucket_name: {}, object_id: {}, file_name: {:?}, content_type: {:?}, content_length: {}",
+                        bucket_name, object_id, file_name, content_type, content_length
                     );
                     let _ = store
                         .insert_metadata(
                             &bucket_name,
-                            &object_key,
+                            &object_id,
                             file_name.as_deref(),
                             content_type.as_deref(),
                             content_length,
                         )
                         .await
                         .unwrap();
-                    return store_data(bytes, object_key).await;
+                    return store_data(bytes, object_id).await;
                 }
                 Err(e) => {
                     error!("POST request failed: {}: {}", e.status(), e.body_text());

@@ -7,7 +7,7 @@ use sqlx::sqlite::SqliteQueryResult;
 pub struct ObjectMetadata {
     pub id: i64,
     pub bucket_name: String,
-    pub object_key: String,
+    pub object_id: String,
     pub file_name: Option<String>,
     pub content_type: Option<String>,
     pub content_length: Option<i64>,
@@ -35,7 +35,7 @@ impl MetadataStore {
     pub async fn insert_metadata(
         &self,
         bucket_name: &str,
-        object_key: &str,
+        object_id: &str,
         file_name: Option<&str>,
         content_type: Option<&str>,
         content_length: i32,
@@ -43,11 +43,11 @@ impl MetadataStore {
         let now = Utc::now().to_rfc3339();
         let result = sqlx::query!(
             "
-            INSERT INTO object_metadata (bucket_name, object_key, file_name, content_type, content_length, created_at)
+            INSERT INTO object_metadata (bucket_name, object_id, file_name, content_type, content_length, created_at)
             VALUES (?, ?, ?, ?, ?, ?)
             ",
             bucket_name,
-            object_key,
+            object_id,
             file_name,
             content_type,
             content_length,
@@ -61,16 +61,16 @@ impl MetadataStore {
     pub async fn get_metadata(
         &self,
         bucket_name: &str,
-        object_key: &str,
+        object_id: &str,
     ) -> Result<Option<ObjectMetadata>> {
         let row = sqlx::query_as!(
             ObjectMetadata,
             "
             SELECT * FROM object_metadata
-            WHERE bucket_name = ? AND object_key = ?
+            WHERE bucket_name = ? AND object_id = ?
             ",
             bucket_name,
-            object_key
+            object_id
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -80,14 +80,14 @@ impl MetadataStore {
     pub async fn delete_metadata(
         &self,
         bucket_name: &str,
-        object_key: &str,
+        object_id: &str,
     ) -> Result<SqliteQueryResult> {
         let result = sqlx::query!(
             "
-            DELETE FROM object_metadata WHERE bucket_name = ? AND object_key = ?
+            DELETE FROM object_metadata WHERE bucket_name = ? AND object_id = ?
             ",
             bucket_name,
-            object_key
+            object_id
         )
         .execute(&self.pool)
         .await?;

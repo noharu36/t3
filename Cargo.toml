@@ -25,10 +25,7 @@ dotenvy = "0.15.7"
 
 [dependencies.uuid]
 version = "1.16.0"
-# Lets you generate random UUIDs
-features = [
-    "v4",
-]
+features = ["v4"]
 
 [dev-dependencies]
 criterion = { version = "0.5.1", features = ["async_tokio"] }

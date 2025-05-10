@@ -5,7 +5,7 @@
 
 ## 機能
 
-* **PUT:** multipart形式でファイルをアップロードし、一意のオブジェクトIDを返します。データはReed-Solomon符号を用いて分割・エンコードされ、複数のストレージに分散して保存されます。
+* **POST:** multipart形式でファイルをアップロードし、一意のオブジェクトIDを返します。データはReed-Solomon符号を用いて分割・エンコードされ、複数のストレージに分散して保存されます。
 * **GET:** オブジェクトIDと元のファイル名を指定することで、保存されたファイルを復元し、ダウンロードできます。元のファイル名からMIMEタイプを予測してレスポンスヘッダーに含めます。
 * **DELETE:** オブジェクトIDを指定することで、関連するデータをストレージから削除します。削除の成否がレスポンスとして返されます。
 * **ログトレース:** `tracing` クレートによるログ出力で、サーバーの動作を追跡できます。
@@ -21,14 +21,14 @@
 
 ## API
 
-* `PUT /bucket/{bucket_name}/{object_key}`: ファイルのアップロード (multipart/form-data)
-* `GET /bucket/{bucket_name}/{object_key}`: ファイルのダウンロード
-* `DELETE /bucket/{bucket_name}/{object_key}`: ファイルの削除
+* `POST /bucket/{bucket_name}/{object_id}`: ファイルのアップロード (multipart/form-data)
+* `GET /bucket/{bucket_name}/{object_id}`: ファイルのダウンロード
+* `DELETE /bucket/{bucket_name}/{object_id}`: ファイルの削除
 * `PUT /bucket/{bucket_name}`: バケットの作成
 * `GET /bucket`: バケットの一覧表示
 * `DELETE /bucket/{bucket_name}`: バケットの削除
 
-**※cURLでPUTTリクエストを送信した時、拡張子からContent-Typeを判断できない場合にエラーが出る可能性があります。PostmanやBrunoなどのAPIクライアントを使うとエラーを解消できるかもしれません...**
+**※cURLでPOSTリクエストを送信した時、拡張子からContent-Typeを判断できない場合にエラーが出る可能性があります。PostmanやBrunoなどのAPIクライアントを使うとエラーを解消できるかもしれません...**
 
 ## 今後の開発予定
 

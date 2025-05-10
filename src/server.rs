@@ -4,7 +4,7 @@ use anyhow::Result;
 use axum::{
     Router,
     extract::DefaultBodyLimit,
-    routing::{get, put},
+    routing::{post, get, put},
 };
 use std::env;
 use std::net::SocketAddr;
@@ -41,8 +41,8 @@ pub fn app(state: MetadataStore) -> Router {
 fn object_routes() -> Router<MetadataStore> {
     Router::new()
         .route(
-            "/bucket/{:bucket_name}/{:object_key}",
-            put(post_object).get(get_object).delete(delete_object),
+            "/bucket/{:bucket_name}/{:object_id}",
+            post(post_object).get(get_object).delete(delete_object),
         )
         .layer(DefaultBodyLimit::disable())
         .layer(RequestBodyLimitLayer::new(3 * 1024 * 1024 * 1024))

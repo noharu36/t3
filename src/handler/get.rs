@@ -31,11 +31,11 @@ impl AsyncRead for MyBytesMut {
 
 #[instrument(skip(store))]
 pub async fn get_object(
-    Path((bucket_name, object_key)): Path<(String, String)>,
+    Path((bucket_name, object_id)): Path<(String, String)>,
     State(store): State<MetadataStore>,
 ) -> impl IntoResponse {
     info!("Handling GET request for object.");
-    let metadata = match store.get_metadata(&bucket_name, &object_key).await {
+    let metadata = match store.get_metadata(&bucket_name, &object_id).await {
         Ok(Some(data)) => data,
         Ok(None) => {
             error!("data not found.");
@@ -49,7 +49,7 @@ pub async fn get_object(
     let file_name = metadata.file_name.unwrap();
     let file_path = std::path::PathBuf::from(&file_name);
     let content_type = mime_guess::from_path(&file_path).first_or_octet_stream();
-    match decode::load_shards(&metadata.object_key).await {
+    match decode::load_shards(&metadata.object_id).await {
         Ok(mut shards) => match decode::decode_shards(&mut shards).await {
             Ok(data) => {
                 let reader = ReaderStream::new(MyBytesMut(data));
