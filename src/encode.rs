@@ -8,7 +8,7 @@ use tokio::fs;
 use tracing::{info, instrument};
 
 #[instrument(skip(content))]
-pub async fn encode_file(content: BytesMut) -> Result<Vec<BytesMut>> {
+pub fn encode_file(content: BytesMut) -> Result<Vec<BytesMut>> {
     info!("encoding...");
     let content_size = content.len();
     let r = ReedSolomon::new(DATA_SHARDS, PARITY_SHARDS)?;

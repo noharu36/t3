@@ -8,14 +8,8 @@ use serde::{Deserialize, Serialize};
 use tracing::{info, instrument};
 use uuid::Uuid;
 
-use crate::{db::MetadataStore, handler::api::ApiResult};
+use crate::{db::{MetadataStore, Bucket}, handler::api::ApiResult};
 
-#[derive(Deserialize, Serialize, Debug)]
-struct Bucket {
-    id: String,
-    bucket_name: String,
-    created_at: String,
-}
 
 #[derive(Deserialize, Serialize)]
 pub struct BucketListResponse {
@@ -35,18 +29,7 @@ pub async fn create_bucket(
         created_at: now,
     };
     // すでにbucket_nameが存在している場合は作成しない
-    let result = sqlx::query!(
-        "
-        INSERT OR IGNORE INTO bucket_metadata (id, bucket_name, created_at)
-        VALUES (?, ?, ?)
-        ",
-        bucket.id,
-        bucket.bucket_name,
-        bucket.created_at
-    )
-    .execute(&store.pool)
-    .await;
-
+    let result = store.create_bucket(&bucket.id, &bucket.bucket_name, &bucket.created_at).await;
     match result {
         Ok(r) => {
             if r.rows_affected() == 0 {
@@ -69,9 +52,7 @@ pub async fn create_bucket(
 
 #[instrument(skip(store))]
 pub async fn list_buckets(State(store): State<MetadataStore>) -> impl IntoResponse {
-    let result = sqlx::query_as!(Bucket, "SELECT * FROM bucket_metadata")
-        .fetch_all(&store.pool)
-        .await;
+    let result = store.get_buckets().await;
 
     match result {
         Ok(buckets) => ApiResult::Success(StatusCode::OK, BucketListResponse { buckets }),
@@ -87,14 +68,7 @@ pub async fn delete_bucket(
     Path(bucket_name): Path<String>,
     State(store): State<MetadataStore>,
 ) -> impl IntoResponse {
-    let result = sqlx::query!(
-        "
-        DELETE FROM bucket_metadata WHERE bucket_name = ?
-        ",
-        bucket_name,
-    )
-    .execute(&store.pool)
-    .await;
+    let result = store.delete_bucket(&bucket_name).await;
 
     match result {
         Ok(r) => {
@@ -118,11 +92,7 @@ pub async fn delete_bucket(
 
 #[instrument(skip(store))]
 pub async fn exist_buckets(bucket_name: &str, store: &MetadataStore) -> Result<bool, sqlx::Error> {
-    sqlx::query_scalar!(
-        "SELECT EXISTS(SELECT 1 FROM bucket_metadata WHERE bucket_name = ?)",
-        bucket_name
-    )
-    .fetch_one(&store.pool)
+    store.exist_buckets(bucket_name)
     .await
     .map(|i| if i == 1 { true } else { false })
 }

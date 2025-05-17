@@ -74,7 +74,7 @@ pub async fn post_object(
 async fn store_data(bytes: Bytes, id: String) -> ApiResult<PostResponse> {
     // bytesからbytesmutへの変換.失敗しないことを祈ってunwrap.
     let data = bytes.try_into_mut().unwrap();
-    match encode::encode_file(data).await {
+    match encode::encode_file(data) {
         Ok(shards) => match encode::save_shards(&shards, &id).await {
             Ok(_) => {
                 info!("Saved data successfully. object_id: {}", id);
