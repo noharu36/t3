@@ -8,8 +8,10 @@ use serde::{Deserialize, Serialize};
 use tracing::{info, instrument};
 use uuid::Uuid;
 
-use crate::{db::{MetadataStore, Bucket}, handler::api::ApiResult};
-
+use crate::{
+    db::{Bucket, MetadataStore},
+    handler::api::ApiResult,
+};
 
 #[derive(Deserialize, Serialize)]
 pub struct BucketListResponse {
@@ -29,7 +31,9 @@ pub async fn create_bucket(
         created_at: now,
     };
     // すでにbucket_nameが存在している場合は作成しない
-    let result = store.create_bucket(&bucket.id, &bucket.bucket_name, &bucket.created_at).await;
+    let result = store
+        .create_bucket(&bucket.id, &bucket.bucket_name, &bucket.created_at)
+        .await;
     match result {
         Ok(r) => {
             if r.rows_affected() == 0 {
@@ -92,7 +96,8 @@ pub async fn delete_bucket(
 
 #[instrument(skip(store))]
 pub async fn exist_buckets(bucket_name: &str, store: &MetadataStore) -> Result<bool, sqlx::Error> {
-    store.exist_buckets(bucket_name)
-    .await
-    .map(|i| if i == 1 { true } else { false })
+    store
+        .exist_buckets(bucket_name)
+        .await
+        .map(|i| if i == 1 { true } else { false })
 }

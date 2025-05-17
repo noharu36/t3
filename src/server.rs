@@ -4,7 +4,7 @@ use anyhow::Result;
 use axum::{
     Router,
     extract::DefaultBodyLimit,
-    routing::{post, get, put},
+    routing::{get, post, put},
 };
 use std::env;
 use std::net::SocketAddr;

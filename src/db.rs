@@ -1,8 +1,8 @@
 use anyhow::Result;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use sqlx::sqlite::SqliteQueryResult;
 use sqlx::Error;
+use sqlx::sqlite::SqliteQueryResult;
 
 #[derive(Deserialize, Serialize, Debug, sqlx::FromRow)]
 pub struct ObjectMetadata {
@@ -62,7 +62,7 @@ impl MetadataStore {
 
     pub async fn get_metadata(
         &self,
-bucket_name: &str,
+        bucket_name: &str,
         object_id: &str,
     ) -> Result<Option<ObjectMetadata>> {
         let row = sqlx::query_as!(
